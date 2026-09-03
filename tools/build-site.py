@@ -522,7 +522,8 @@ def build_page(src_dir, lang_cfg, out_dir, other):
 
     # Sections before the publication list, then the ones after it, matching
     # the ordering of the PDF.
-    for fname, bucket in (("education", before), ("employment", before),
+    for fname, bucket in (("education", before), ("work", before),
+                          ("employment", before),
                           ("skills", after), ("misc", after)):
         path = os.path.join(src_dir, fname + ".tex")
         if not os.path.exists(path):
