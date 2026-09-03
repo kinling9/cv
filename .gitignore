@@ -15,3 +15,6 @@ indent.log
 *.zip
 *.tar.gz
 *.jpg
+
+# Private contact details (phone, WeChat) -- see personal-example.tex
+personal.tex
