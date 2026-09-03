@@ -1,12 +1,12 @@
 #!/bin/sh
-# Fail if a PDF destined for publication contains any value from personal.tex.
+# Fail if anything about to be published contains a value from personal.tex.
 #
 # `make public` builds from git-tracked files only, so a leak should already be
 # impossible. This is the independent check on top of that: it reads the real
-# values straight out of the gitignored personal.tex files and looks for them
-# in the generated PDFs. Run standalone with:
+# values out of the gitignored personal.tex files and looks for them in the
+# generated PDFs and HTML. Run standalone with:
 #
-#     sh tools/check-public.sh public/*.pdf
+#     sh tools/check-public.sh docs/*
 
 set -eu
 
@@ -23,35 +23,45 @@ for f in */personal.tex; do
         >> "$secrets".raw
 done
 sort -u "$secrets".raw > "$secrets" 2>/dev/null || true
-rm -f "$secrets".raw
 
 if [ ! -s "$secrets" ]; then
     echo "  no personal.tex found - nothing to check against"
     exit 0
 fi
 
-if ! command -v pdftotext >/dev/null 2>&1; then
-    echo "  WARNING: pdftotext not installed, cannot verify PDFs" >&2
-    exit 0
-fi
+have_pdftotext=yes
+command -v pdftotext >/dev/null 2>&1 || have_pdftotext=no
 
-for pdf in "$@"; do
-    if [ ! -e "$pdf" ]; then
-        echo "  missing: $pdf" >&2
-        status=1
-        continue
-    fi
-    text=$(pdftotext "$pdf" - 2>/dev/null || true)
+for target in "$@"; do
+    [ -e "$target" ] || continue          # unmatched glob, or not built yet
+
+    case "$target" in
+        *.pdf)
+            if [ "$have_pdftotext" = no ]; then
+                echo "  WARNING: pdftotext missing, cannot check $target" >&2
+                continue
+            fi
+            text=$(pdftotext "$target" - 2>/dev/null || true)
+            ;;
+        *.html|*.htm|*.css|*.txt|*.md|*.json)
+            text=$(cat "$target")
+            ;;
+        *)
+            continue                      # nothing meaningful to scan
+            ;;
+    esac
+
     leaked=0
     while IFS= read -r secret; do
         [ -n "$secret" ] || continue
         if printf '%s' "$text" | grep -qF -- "$secret"; then
-            echo "  LEAK: $pdf contains '$secret'" >&2
+            echo "  LEAK: $target contains '$secret'" >&2
             leaked=1
         fi
     done < "$secrets"
+
     if [ "$leaked" -eq 0 ]; then
-        echo "  ok: $pdf"
+        echo "  ok: $target"
     else
         status=1
     fi

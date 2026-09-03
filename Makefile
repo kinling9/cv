@@ -5,19 +5,18 @@
 #                  taken from the gitignored personal.tex / photo.jpg. These
 #                  are the PDFs to send with an actual application. Output
 #                  stays in English/ and Chinese/ and is gitignored.
-#   make public    Sanitised CV for publishing. Built from git-tracked files
-#                  only, so personal.tex and photo.jpg are structurally absent
-#                  rather than deleted by hand. Output lands in public/ and is
-#                  committed, so the PDFs are readable straight from GitHub.
+#   make public    Everything published from this repository: both PDFs and the
+#                  HTML site, into docs/. Served by GitHub Pages.
+#   make site      Just regenerate the HTML, skipping the slow LaTeX runs.
 #   make clean     Remove LaTeX build artefacts.
-#   make distclean clean, and drop public/ as well.
+#   make distclean clean, and drop docs/ as well.
 
 BUILDDIR  := .build
-PUBLICDIR := public
+PUBLICDIR := docs
 
 LATEXMK := latexmk -interaction=nonstopmode -halt-on-error
 
-.PHONY: all private public verify clean distclean
+.PHONY: all private public site verify export clean distclean
 
 all: private
 
@@ -31,33 +30,43 @@ private:
 
 # ------------------------------------------------------------------- public --
 #
-# The safety of this target rests on one thing: it builds from `git ls-files`,
-# which lists tracked files only. personal.tex and photo.jpg are gitignored, so
-# they cannot reach $(BUILDDIR) -- there is no step here that could be forgotten
-# or reordered into leaking them. cv-llt.tex then falls back to
+# The safety of the public build rests on `export`: it populates $(BUILDDIR)
+# from `git ls-files`, which lists tracked files only. personal.tex and
+# photo.jpg are gitignored, so they cannot reach the build -- the guarantee is
+# structural, not a step someone has to remember. cv-llt.tex then falls back to
 # personal-example.tex and omits the contact rows.
 
-public:
+export:
 	@rm -rf $(BUILDDIR)
 	@mkdir -p $(BUILDDIR) $(PUBLICDIR)
 	@git ls-files -z | tar --null -T - -cf - | tar -xf - -C $(BUILDDIR)
 	@for f in $(BUILDDIR)/*/personal.tex $(BUILDDIR)/*/photo.jpg; do \
 		test ! -e "$$f" || { echo "ERROR: $$f reached the public build"; exit 1; }; \
 	done
-	@echo "==> English (public)"
+
+public: export
+	@echo "==> English PDF (public)"
 	cd $(BUILDDIR)/English && $(LATEXMK) -pdf cv-llt.tex
-	@echo "==> Chinese (public)"
+	@echo "==> Chinese PDF (public)"
 	cd $(BUILDDIR)/Chinese && $(LATEXMK) -xelatex cv-llt.tex
 	cp $(BUILDDIR)/English/cv-llt.pdf $(PUBLICDIR)/cv-en.pdf
 	cp $(BUILDDIR)/Chinese/cv-llt.pdf $(PUBLICDIR)/cv-zh.pdf
+	@echo "==> HTML site"
+	python3 tools/build-site.py --source $(BUILDDIR) --out $(PUBLICDIR)
+	@rm -rf $(BUILDDIR)
+	@$(MAKE) --no-print-directory verify
+
+site: export
+	@echo "==> HTML site"
+	python3 tools/build-site.py --source $(BUILDDIR) --out $(PUBLICDIR)
 	@rm -rf $(BUILDDIR)
 	@$(MAKE) --no-print-directory verify
 
 # Belt and braces: read the real values out of personal.tex and confirm they
-# are absent from the PDFs that are about to be committed.
+# are absent from every file about to be committed.
 verify:
-	@echo "==> verifying public PDFs"
-	@sh tools/check-public.sh $(PUBLICDIR)/cv-en.pdf $(PUBLICDIR)/cv-zh.pdf
+	@echo "==> verifying published files"
+	@sh tools/check-public.sh $(PUBLICDIR)/*
 
 # -------------------------------------------------------------------- clean --
 

@@ -24,4 +24,4 @@ personal.tex
 
 # Published PDFs are the exception to the *.pdf rule above: they are built by
 # `make public` from tracked files only, so they carry no private data.
-!public/*.pdf
+!docs/*.pdf
