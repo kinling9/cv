@@ -1,72 +1,63 @@
-# Build the CV in two flavours.
+# Build the CV.
 #
-#   make           same as `make private`
-#   make private   Full CV, including the phone number, WeChat ID and photo
-#                  taken from the gitignored personal.tex / photo.jpg. These
-#                  are the PDFs to send with an actual application. Output
-#                  stays in English/ and Chinese/ and is gitignored.
-#   make public    Everything published from this repository: both PDFs and the
-#                  HTML site, into docs/. Served by GitHub Pages.
-#   make site      Just regenerate the HTML, skipping the slow LaTeX runs.
+#   make           Build both PDFs in place. Output stays in English/ and
+#                  Chinese/ and is gitignored.
+#   make docs      Rebuild everything published under docs/ -- both PDFs and
+#                  the HTML site -- from tracked files only.
+#   make site      Rebuild just the HTML, skipping the slow LaTeX runs.
+#   make check     Check docs/ before committing.
 #   make clean     Remove LaTeX build artefacts.
 #   make distclean clean, and drop docs/ as well.
 
-BUILDDIR  := .build
-PUBLICDIR := docs
+BUILDDIR := .build
+DOCSDIR  := docs
 
 LATEXMK := latexmk -interaction=nonstopmode -halt-on-error
 
-.PHONY: all private public site verify export clean distclean
+.PHONY: all docs site check stage clean distclean
 
-all: private
-
-# ------------------------------------------------------------------ private --
-
-private:
-	@echo "==> English (private)"
+all:
+	@echo "==> English"
 	cd English && $(LATEXMK) -pdf cv-llt.tex
-	@echo "==> Chinese (private)"
+	@echo "==> Chinese"
 	cd Chinese && $(LATEXMK) -xelatex cv-llt.tex
 
-# ------------------------------------------------------------------- public --
+# --------------------------------------------------------------------- docs --
 #
-# The safety of the public build rests on `export`: it populates $(BUILDDIR)
-# from `git ls-files`, which lists tracked files only. personal.tex and
-# photo.jpg are gitignored, so they cannot reach the build -- the guarantee is
-# structural, not a step someone has to remember. cv-llt.tex then falls back to
-# personal-example.tex and omits the contact rows.
+# `stage` populates $(BUILDDIR) from `git ls-files`, which lists tracked files
+# only. Anything gitignored is therefore absent from the build by construction
+# rather than by a step someone has to remember, and cv-llt.tex falls back to
+# personal-example.tex for the fields it cannot find.
 
-export:
+stage:
 	@rm -rf $(BUILDDIR)
-	@mkdir -p $(BUILDDIR) $(PUBLICDIR)
+	@mkdir -p $(BUILDDIR) $(DOCSDIR)
 	@git ls-files -z | tar --null -T - -cf - | tar -xf - -C $(BUILDDIR)
 	@for f in $(BUILDDIR)/*/personal.tex $(BUILDDIR)/*/photo.jpg; do \
-		test ! -e "$$f" || { echo "ERROR: $$f reached the public build"; exit 1; }; \
+		test ! -e "$$f" || { echo "ERROR: $$f reached the docs build"; exit 1; }; \
 	done
 
-public: export
-	@echo "==> English PDF (public)"
+docs: stage
+	@echo "==> English PDF"
 	cd $(BUILDDIR)/English && $(LATEXMK) -pdf cv-llt.tex
-	@echo "==> Chinese PDF (public)"
+	@echo "==> Chinese PDF"
 	cd $(BUILDDIR)/Chinese && $(LATEXMK) -xelatex cv-llt.tex
-	cp $(BUILDDIR)/English/cv-llt.pdf $(PUBLICDIR)/cv-en.pdf
-	cp $(BUILDDIR)/Chinese/cv-llt.pdf $(PUBLICDIR)/cv-zh.pdf
+	cp $(BUILDDIR)/English/cv-llt.pdf $(DOCSDIR)/cv-en.pdf
+	cp $(BUILDDIR)/Chinese/cv-llt.pdf $(DOCSDIR)/cv-zh.pdf
 	@echo "==> HTML site"
-	python3 tools/build-site.py --source $(BUILDDIR) --out $(PUBLICDIR)
+	python3 tools/build-site.py --source $(BUILDDIR) --out $(DOCSDIR)
 	@rm -rf $(BUILDDIR)
-	@$(MAKE) --no-print-directory verify
+	@$(MAKE) --no-print-directory check
 
-site: export
+site: stage
 	@echo "==> HTML site"
-	python3 tools/build-site.py --source $(BUILDDIR) --out $(PUBLICDIR)
+	python3 tools/build-site.py --source $(BUILDDIR) --out $(DOCSDIR)
 	@rm -rf $(BUILDDIR)
-	@$(MAKE) --no-print-directory verify
+	@$(MAKE) --no-print-directory check
 
-# Belt and braces: read the real values out of personal.tex and confirm they
-# are absent from every file about to be committed.
-verify:
-	@echo "==> verifying published files"
-	@sh tools/check-public.sh $(PUBLICDIR)/*
+check:
+	@echo "==> checking docs/"
+	@sh tools/check-docs.sh $(DOCSDIR)/*
 
 # -------------------------------------------------------------------- clean --
 
@@ -76,4 +67,4 @@ clean:
 	rm -rf $(BUILDDIR)
 
 distclean: clean
-	rm -rf $(PUBLICDIR)
+	rm -rf $(DOCSDIR)

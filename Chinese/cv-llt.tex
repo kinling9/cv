@@ -62,23 +62,22 @@
 % Change the item prefix marker if you want
 % \prefixmarker{$\diamond$}
 
-%% Photo is only shown if "fullonly" is included AND photo.jpg is present.
-%% photo.jpg is gitignored, so a fresh clone still compiles -- just without it.
+%% Photo is only shown if "fullonly" is included AND photo.jpg is present,
+%% so a clone without the image still compiles -- just without it.
 \IfFileExists{photo.jpg}{\includecomment{fullonly}}{\excludecomment{fullonly}}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-%% Private contact details. personal.tex holds the real values and is
-%% gitignored; personal-example.tex is the committed template.
+%% Local settings. personal.tex is gitignored; personal-example.tex is the
+%% committed template used when it is absent.
 \IfFileExists{personal.tex}{\input{personal}}{\input{personal-example}}
 
 \leftheader{%
   {\LARGE\bfseries\sffamily 魏民}
 
-  % Phone number and WeChat ID live in personal.tex (gitignored).
-  % Each field is omitted entirely when its value is empty.
+  % Defined in personal.tex; each field is omitted when its value is empty.
   \ifdefempty{\cvphone}{}{\makefield{\faPhone}{\texttt{\cvphone}}}
   \ifdefempty{\cvwechat}{}{\makefield{\faWeixin}{\cvwechat}}
   %% Next line

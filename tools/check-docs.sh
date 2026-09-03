@@ -1,12 +1,12 @@
 #!/bin/sh
-# Fail if anything about to be published contains a value from personal.tex.
+# Confirm that nothing from a local personal.tex reached docs/.
 #
-# `make public` builds from git-tracked files only, so a leak should already be
-# impossible. This is the independent check on top of that: it reads the real
-# values out of the gitignored personal.tex files and looks for them in the
-# generated PDFs and HTML. Run standalone with:
+# `make docs` builds from git-tracked files only, so this should already hold.
+# This is the independent check on top of that: it reads whatever values
+# personal.tex defines and looks for them in the generated PDFs and HTML.
+# Run standalone with:
 #
-#     sh tools/check-public.sh docs/*
+#     sh tools/check-docs.sh docs/*
 
 set -eu
 
@@ -15,7 +15,7 @@ secrets=$(mktemp)
 trap 'rm -f "$secrets" "$secrets".raw' EXIT
 
 # Pull the value out of each \newcommand{\cvsomething}{value}, then undo the
-# LaTeX escaping so the string matches what actually gets typeset.
+# LaTeX escaping so it matches what actually gets typeset.
 for f in */personal.tex; do
     [ -e "$f" ] || continue
     sed -n 's/.*\\newcommand{\\cv[a-z]*}{\(..*\)}.*/\1/p' "$f" \

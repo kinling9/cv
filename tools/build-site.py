@@ -5,10 +5,9 @@ Generating rather than hand-writing the HTML keeps the .tex files the single
 source of truth: editing employment.tex updates the PDF and the web page
 together, so the two cannot drift apart.
 
-This script deliberately never reads personal.tex. The phone number and WeChat
-ID must not reach the published site, and `make public` additionally runs it
-over a tree exported with `git ls-files`, where personal.tex is absent anyway.
-tools/check-public.sh then greps the generated HTML as a final check.
+This script deliberately never reads personal.tex, and `make docs` runs it over
+a tree exported with `git ls-files`, where that file is absent anyway.
+tools/check-docs.sh then greps the generated HTML as a final check.
 """
 
 import argparse

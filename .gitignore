@@ -16,12 +16,12 @@ indent.log
 *.tar.gz
 *.jpg
 
-# Private contact details (phone, WeChat) -- see personal-example.tex
+# Local settings -- see personal-example.tex
 personal.tex
 
 # Scratch tree used by `make public`
 .build/
 
 # Published PDFs are the exception to the *.pdf rule above: they are built by
-# `make public` from tracked files only, so they carry no private data.
+# `make docs` from tracked files only.
 !docs/*.pdf
